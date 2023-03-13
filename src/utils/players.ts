@@ -6,7 +6,20 @@ export const countPlayers = (players: Players, id?: string) => {
   return Object.keys(players).filter((playerId) => playerId !== id).length
 }
 
-export const generateAIId = () => `${AI_PLAYER_PREFIX}${uuid().slice(3)}`
+const sliceId = (id: string) => {
+  const prefixLength = AI_PLAYER_PREFIX.length
+  return id.slice(prefixLength)
+}
+
+export const generateAIId = (removedPlayerId?: string) => {
+  const id = removedPlayerId || uuid()
+  return `${AI_PLAYER_PREFIX}${sliceId(id)}`
+}
+
+export const findSubstituteAI = (players: Players, id: string) => {
+  const playerList = Object.keys(players)
+  return playerList.find((playerId) => sliceId(playerId) === sliceId(id))
+}
 
 export const isPlayerAI = (id: string) => id.startsWith(AI_PLAYER_PREFIX)
 

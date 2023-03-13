@@ -13,6 +13,7 @@ import {
   CustomColor,
   GameSettings,
   Match,
+  Player,
   Players,
 } from '@/types'
 import {
@@ -20,7 +21,6 @@ import {
   dealCards,
   fillPlayers,
   getCardsInfo,
-  findAIPlayer,
   makePlayer,
   generateAIId,
   matchPublicInfo,
@@ -29,6 +29,7 @@ import {
   getPlaceableCards,
   shuffle,
   generateMatchPlayers,
+  findSubstituteAI,
 } from '@/utils'
 
 const log = (info: any) => console.log(info, '\n')
@@ -177,8 +178,7 @@ export const game = (io: Server) => {
     autoPlay(nextPlayer)
 
     notifyPlayerCards(playerId)
-    if (!hasWon) return notifyMatchState()
-    notifyMatchState(true)
+    notifyMatchState(!!match.winner)
 
     players = {
       ...players,
@@ -226,7 +226,7 @@ export const game = (io: Server) => {
 
   function autoPlay(playerId: string) {
     setTimeout(() => {
-      if (!isPlayerAI(playerId)) return
+      if (!isPlayerAI(playerId) || !match.players[playerId]) return
 
       const cards = match.players[playerId].cards
       const placeableCards = getPlaceableCards(
@@ -252,13 +252,53 @@ export const game = (io: Server) => {
     notifyPlayersState()
   }
 
-  function addPlayer(id: string) {
-    const order = Object.keys(players).length + 1
-    const player = makePlayer(order, availableColors[0])
+  function switchPlayer(removedId: string, newId: string, playerInfo: Player) {
+    const removedPlayerCards = match.players[removedId].cards
+    delete match.players[removedId]
 
+    players = {
+      ...players,
+      [newId]: playerInfo,
+    }
+    match = {
+      ...match,
+      winner: match.winner === removedId ? newId : match.winner,
+      currentPlayer:
+        match.currentPlayer === removedId ? newId : match.currentPlayer,
+      startingPlayer:
+        match.startingPlayer === removedId ? newId : match.startingPlayer,
+      players: {
+        ...match.players,
+        [newId]: { cards: removedPlayerCards },
+      },
+    }
+
+    if (!isPlayerAI(newId)) {
+      notifyPlayerCards(newId)
+    } else if (match.currentPlayer === newId) {
+      autoPlay(newId)
+    }
+
+    const index = gameSettings.playersOrder.findIndex(
+      (item) => item === removedId
+    )
+    gameSettings.playersOrder[index] = newId
+
+    notifyMatchState(!!match.winner)
+    notifyPlayersState()
+  }
+
+  function addPlayer(id: string, substituteAIId?: string) {
+    const order = Object.keys(players).length + 1
+    const player = substituteAIId
+      ? players[substituteAIId]
+      : makePlayer(order, availableColors[0])
+
+    if (substituteAIId) delete players[substituteAIId]
     players = { ...players, [id]: player }
 
-    notifyPlayersState()
+    if (!gameStarted || !substituteAIId) return
+    switchPlayer(substituteAIId, id, player)
   }
 
   function removePlayer(id: string) {
@@ -267,42 +307,19 @@ export const game = (io: Server) => {
 
     if (!gameStarted) return
 
-    const AIId = generateAIId()
-    const removedPlayerCards = match.players[id].cards
-    delete match.players[id]
-
-    players = {
-      ...players,
-      [AIId]: player,
-    }
-    match = {
-      ...match,
-      winner: match.winner === id ? AIId : match.winner,
-      currentPlayer: match.currentPlayer === id ? AIId : match.currentPlayer,
-      startingPlayer: match.startingPlayer === id ? AIId : match.startingPlayer,
-      players: {
-        ...match.players,
-        [AIId]: { cards: removedPlayerCards },
-      },
-    }
-
-    if (match.currentPlayer === AIId) autoPlay(AIId)
-
-    const index = gameSettings.playersOrder.findIndex((item) => item === id)
-    gameSettings.playersOrder[index] = AIId
-
-    notifyMatchState()
-    notifyPlayersState()
+    const AIId = generateAIId(id)
+    switchPlayer(id, AIId, player)
   }
 
   function handleConnection(id: string, socket: Socket) {
     const numberOfPlayers = countPlayers(players, id)
+    const substituteAIId = findSubstituteAI(players, id)
+    const isGameFull =
+      gameStarted || numberOfPlayers === gameSettings.numberOfPlayers
 
-    if (numberOfPlayers === gameSettings.numberOfPlayers) {
-      socket.disconnect()
-    }
+    if (isGameFull && !substituteAIId) return socket.disconnect()
 
-    if (!gameStarted && !players[id]) addPlayer(id)
+    addPlayer(id, substituteAIId)
   }
 
   io.on('connection', (socket) => {
@@ -312,7 +329,7 @@ export const game = (io: Server) => {
     handleConnection(id, socket)
 
     socket.on('disconnect', () => {
-      log(`disconnected: ${id}`)
+      log(`\n disconnected: ${id}`)
       removePlayer(id)
     })
 
