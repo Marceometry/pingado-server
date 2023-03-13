@@ -2,6 +2,7 @@ import express from 'express'
 import http from 'http'
 import cors from 'cors'
 import { Server } from 'socket.io'
+import { game } from './game'
 
 const CLIENT_URL = 'http://localhost:5173'
 
@@ -18,8 +19,6 @@ const io = new Server(server, {
   },
 })
 
-io.on('connection', (socket) => {
-  console.log('connected', socket.id)
-})
+game(io)
 
 server.listen(8080, () => console.log('Server is running!'))
