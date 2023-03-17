@@ -337,13 +337,13 @@ export const game = (io: Server) => {
   }
 
   io.on('connection', (socket) => {
-    log(`\n connected: ${socket.handshake.auth.id}`)
+    log(`\nconnected: ${socket.handshake.auth.id}`)
 
     const id = socket.handshake.auth.id
     handleConnection(id, socket)
 
     socket.on('disconnect', () => {
-      log(`\n disconnected: ${id}`)
+      log(`\ndisconnected: ${id}`)
       removePlayer(id)
     })
 
