@@ -30,6 +30,7 @@ import {
   shuffle,
   generateMatchPlayers,
   findSubstituteAI,
+  findAIPlayer,
 } from '@/utils'
 
 const log = (info: any) => console.log(info, '\n')
@@ -241,6 +242,17 @@ export const game = (io: Server) => {
     }, AUTOPLAY_DELAY_MS)
   }
 
+  function updateUserName(playerId: string, name: string) {
+    players = {
+      ...players,
+      [playerId]: {
+        ...players[playerId],
+        name,
+      },
+    }
+    notifyPlayersState()
+  }
+
   function updateUserColor(playerId: string, color: CustomColor) {
     players = {
       ...players,
@@ -297,7 +309,7 @@ export const game = (io: Server) => {
     if (substituteAIId) delete players[substituteAIId]
     players = { ...players, [id]: player }
 
-    if (!gameStarted || !substituteAIId) return
+    if (!substituteAIId) return
     switchPlayer(substituteAIId, id, player)
   }
 
@@ -314,12 +326,14 @@ export const game = (io: Server) => {
   function handleConnection(id: string, socket: Socket) {
     const numberOfPlayers = countPlayers(players, id)
     const substituteAIId = findSubstituteAI(players, id)
+    const AIPlayer = findAIPlayer(players)
+    const hasAIPlaying = !!substituteAIId || !!AIPlayer
     const isGameFull =
       gameStarted || numberOfPlayers === gameSettings.numberOfPlayers
 
-    if (isGameFull && !substituteAIId) return socket.disconnect()
+    if (isGameFull && !hasAIPlaying) return socket.disconnect()
 
-    addPlayer(id, substituteAIId)
+    addPlayer(id, substituteAIId || AIPlayer)
   }
 
   io.on('connection', (socket) => {
@@ -344,5 +358,7 @@ export const game = (io: Server) => {
     socket.on(SOCKET_EVENTS.dropAndSkip, () => dropAndSkipTurn(id))
 
     socket.on(SOCKET_EVENTS.userColor, (color) => updateUserColor(id, color))
+
+    socket.on(SOCKET_EVENTS.userName, (name) => updateUserName(id, name))
   })
 }

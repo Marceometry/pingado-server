@@ -7,4 +7,5 @@ export const SOCKET_EVENTS = {
   placeCard: 'place-card',
   dropAndSkip: 'drop-and-skip',
   userColor: 'user-color',
+  userName: 'user-name',
 } as const
