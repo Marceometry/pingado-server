@@ -15,12 +15,9 @@ app.use(cors())
 const server = http.createServer(app)
 
 const io = new Server(server, {
-  cors: { origin },
+  cors: { origin: true },
 })
 
 game(io)
 
-server.listen(8080, () => {
-  console.log('\nServer is running!\n')
-  console.log('\nCORS:\n', origin)
-})
+server.listen(8080, () => console.log('\nServer is running!\n'))
