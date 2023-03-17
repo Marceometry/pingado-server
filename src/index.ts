@@ -4,7 +4,7 @@ import cors from 'cors'
 import { Server } from 'socket.io'
 import { game } from './game'
 
-const CLIENT_URL = 'http://localhost:5173'
+const CLIENT_URL = 'https://pingado.vercel.app'
 
 const app = express()
 app.use(express.json())
