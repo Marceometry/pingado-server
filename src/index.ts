@@ -12,12 +12,7 @@ app.use(cors())
 
 const server = http.createServer(app)
 
-const io = new Server(server, {
-  cors: {
-    origin: CLIENT_URL,
-    methods: ['GET', 'POST'],
-  },
-})
+const io = new Server(server, { cors: { origin: '*' } })
 
 game(io)
 
