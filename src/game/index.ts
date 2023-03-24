@@ -181,6 +181,7 @@ export const game = (io: Server) => {
     notifyPlayerCards(playerId)
     notifyMatchState(!!match.winner)
 
+    if (!hasWon) return
     players = {
       ...players,
       [playerId]: {
