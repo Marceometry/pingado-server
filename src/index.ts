@@ -6,7 +6,7 @@ import { game } from './game'
 
 const CLIENT_LOCAL_URL = 'http://localhost:5173'
 const CLIENT_PROD_URL = 'https://pingado.vercel.app'
-const origin = '*' // [CLIENT_LOCAL_URL, CLIENT_PROD_URL]
+const origin = [CLIENT_LOCAL_URL, CLIENT_PROD_URL]
 const port = process.env.PORT || 8080
 
 const app = express()
